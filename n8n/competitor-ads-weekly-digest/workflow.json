@@ -1,0 +1,244 @@
+{
+  "name": "Email a weekly digest of competitors\u2019 new Google ads with Apify and Gmail",
+  "nodes": [
+    {
+      "id": "374166bf-c9a9-4e01-93b0-97a53a73cd0e",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -120
+      ],
+      "parameters": {
+        "content": "## Weekly email of your competitors' new Google ads\n\nEvery Monday this looks up the advertisers you name in Google's Ads Transparency Center and emails you the ads each one **started running** in the last 7 days: a picture of each ad, its format, the day Google first showed it and a link to it. It also shows Google's own count of everything the advertiser runs, so a jump from 300 ads to 900 is visible at a glance.\n\n### How it works\n1. **Every Monday at 8:00** starts the run. Change the day in the trigger.\n2. **Your competitors** holds what you edit: websites, advertiser names or advertiser IDs (one per line), who gets the email, and how far back \"new\" goes.\n3. **Look up their new ads** runs the Google Ads Transparency Scraper on Apify. A website line finds every ad pointing at that site, agencies and regional entities included.\n4. **Build the digest** groups the ads by competitor, shows six of each (ones with a picture first), and says plainly when a competitor launched nothing or couldn't be looked up.\n5. **Email the digest** sends it through Gmail.\n\n### Setup\n1. Install the verified **Apify** node and add your Apify API token.\n2. Connect Gmail in **Email the digest**.\n3. Put your competitors and your address in **Your competitors**.\n\n### Cost\n$0.0005 per new ad returned. In our test hoka.com launched 66 ads in a week, which is $0.033; a competitor with no new ads costs nothing. **maxNewAdsPerCompetitor** caps the bill, and it is also how deep Google's list is read, so keep it high for big advertisers.",
+        "width": 500,
+        "height": 700
+      }
+    },
+    {
+      "id": "437dc568-0de1-4480-984c-419467990199",
+      "name": "Section: who to watch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "content": "## 1. Who to watch\nWebsites work best: they catch every advertiser running ads for that site.",
+        "width": 460,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "1e7aa117-03ff-410c-898f-caff173eef9f",
+      "name": "Section: their new ads",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        0
+      ],
+      "parameters": {
+        "content": "## 2. Their new ads\nOne Apify run for all competitors, newest first.",
+        "width": 320,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "785cbc34-747e-4f5a-b392-f0647e61f87d",
+      "name": "Section: the email",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        840,
+        0
+      ],
+      "parameters": {
+        "content": "## 3. The email\nOne message, one section per competitor.",
+        "width": 520,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "a261c909-f3e0-42e2-ac9b-9ac11f5a7043",
+      "name": "Every Monday at 8:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        60,
+        160
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "242a097e-c1bd-4416-b659-e46fa66883b4",
+      "name": "Your competitors",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        160
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d29d194b-032f-41b5-80a6-60d8eb6d0632",
+              "name": "competitors",
+              "type": "string",
+              "value": "allbirds.com\nhoka.com\nbrooksrunning.com"
+            },
+            {
+              "id": "98066ef2-8053-4129-a610-51cf02747ecd",
+              "name": "sendTo",
+              "type": "string",
+              "value": "you@example.com"
+            },
+            {
+              "id": "f59f4310-e542-4e7d-943b-d5e0d7db9c32",
+              "name": "newSince",
+              "type": "string",
+              "value": "7 days"
+            },
+            {
+              "id": "4b747498-4afe-490e-9409-36c56e31867b",
+              "name": "maxNewAdsPerCompetitor",
+              "type": "number",
+              "value": 5000
+            },
+            {
+              "id": "b09045b3-07e3-49e8-841d-7f3deaef5536",
+              "name": "region",
+              "type": "string",
+              "value": "anywhere"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "187cb6a4-667e-43e9-9cd6-1ce97799a01c",
+      "name": "Look up their new ads",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        580,
+        160
+      ],
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "VAKIrdPisYxybGxUF"
+        },
+        "actorInputMode": "json",
+        "customBody": "={{ JSON.stringify({\n  targets: $json.competitors.split('\\n').map((s) => s.trim()).filter(Boolean),\n  firstShownSince: $json.newSince,\n  maxAds: $json.maxNewAdsPerCompetitor,\n  region: $json.region\n}) }}",
+        "memory": 256
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "e4ed5f80-740b-4dc5-902d-b113d4d6cab1",
+      "name": "Build the digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// One email for the whole week. Competitors come from the settings node, so a\n// competitor that launched nothing still gets a line saying so.\nconst settings = $('Your competitors').first().json;\nconst lines = settings.competitors.split('\\n').map((s) => s.trim()).filter(Boolean);\nconst rows = $input.all().map((i) => i.json);\nconst esc = (s) => String(s ?? '').replace(/[&<>\"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[c]));\nconst day = (iso) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '');\nconst count = (r) => (r.googleAdCountMin == null ? '' : r.googleAdCountMin === r.googleAdCountMax\n  ? `${r.googleAdCountMin.toLocaleString('en-US')}` : `${r.googleAdCountMin.toLocaleString('en-US')}\u2013${r.googleAdCountMax.toLocaleString('en-US')}`);\n\nlet total = 0;\nlet active = 0;\nconst sections = lines.map((line) => {\n  const mine = rows.filter((r) => r.target === line);\n  const failed = mine.find((r) => r.type === 'error');\n  if (failed) {\n    return `<h3 style=\"margin:28px 0 6px\">${esc(line)}</h3><p style=\"color:#b3261e;margin:0\">Couldn't look this one up: ${esc(failed.errorDescription)}</p>`;\n  }\n  const ads = mine.filter((r) => r.type === 'ad');\n  if (!ads.length) {\n    return `<h3 style=\"margin:28px 0 6px\">${esc(line)}</h3><p style=\"color:#5b6673;margin:0\">No new ads in the last ${esc(settings.newSince)}.</p>`;\n  }\n  total += ads.length;\n  active += 1;\n  const who = [...new Set(ads.map((a) => a.advertiserName).filter(Boolean))].slice(0, 3).join(', ');\n  // Google keeps no picture of some image ads, so ads with one are shown first.\n  const shown = [...ads.filter((a) => a.imageUrl), ...ads.filter((a) => !a.imageUrl)].slice(0, 6);\n  const cards = shown.map((a) => `\n    <td style=\"width:33%;padding:6px;vertical-align:top\">\n      <a href=\"${esc(a.adUrl)}\" style=\"text-decoration:none;color:#17202a\">\n        <div style=\"border:1px solid #e4e7eb;border-radius:8px;overflow:hidden;background:#fff\">\n          ${a.imageUrl ? `<img src=\"${esc(a.imageUrl)}\" alt=\"\" style=\"display:block;width:100%;height:120px;object-fit:contain;background:#f6f7f8\">` : `<div style=\"height:120px;background:#f6f7f8;color:#9aa3ad;font-size:12px;text-align:center;line-height:120px\">no picture kept \u00b7 open on Google</div>`}\n          <div style=\"padding:8px 10px;font-size:12px;color:#5b6673\">${esc(a.format)} \u00b7 first shown ${day(a.firstShown)}</div>\n        </div>\n      </a>\n    </td>`);\n  const rowsHtml = [];\n  for (let i = 0; i < cards.length; i += 3) rowsHtml.push(`<tr>${cards.slice(i, i + 3).join('')}</tr>`);\n  const more = ads.length > 6 ? `<p style=\"margin:4px 6px;font-size:13px;color:#5b6673\">and ${ads.length - 6} more.</p>` : '';\n  return `<h3 style=\"margin:28px 0 2px\">${esc(line)} <span style=\"font-weight:400;color:#5b6673\">\u00b7 ${ads.length} new</span></h3>\n    <p style=\"margin:0 0 8px;font-size:13px;color:#5b6673\">${esc(who)}${count(ads[0]) ? ` \u00b7 Google lists ${count(ads[0])} ads in all` : ''}</p>\n    <table style=\"width:100%;border-collapse:collapse\">${rowsHtml.join('')}</table>${more}`;\n});\n\nconst subject = total\n  ? `Competitor ads: ${total} new in the last ${settings.newSince}, from ${active} of ${lines.length}`\n  : `Competitor ads: nothing new in the last ${settings.newSince}`;\nconst html = `<div style=\"font-family:Arial,Helvetica,sans-serif;max-width:640px;color:#17202a\">\n  <h2 style=\"margin:0 0 4px\">${esc(subject)}</h2>\n  <p style=\"margin:0;color:#5b6673;font-size:13px\">Ads Google first showed in the last ${esc(settings.newSince)}, from the Ads Transparency Center.</p>\n  ${sections.join('\\n')}\n</div>`;\nreturn [{ json: { subject, html, newAds: total } }];"
+      }
+    },
+    {
+      "id": "75527c77-4869-45a6-abe5-260314702f92",
+      "name": "Email the digest",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1160,
+        160
+      ],
+      "parameters": {
+        "sendTo": "={{ $('Your competitors').first().json.sendTo }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "html",
+        "message": "={{ $json.html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday at 8:00": {
+      "main": [
+        [
+          {
+            "node": "Your competitors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Your competitors": {
+      "main": [
+        [
+          {
+            "node": "Look up their new ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look up their new ads": {
+      "main": [
+        [
+          {
+            "node": "Build the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build the digest": {
+      "main": [
+        [
+          {
+            "node": "Email the digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

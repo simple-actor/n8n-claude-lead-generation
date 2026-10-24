@@ -1,0 +1,292 @@
+{
+  "name": "Enrich company rows in Google Sheets with emails and phones from their websites using Apify",
+  "nodes": [
+    {
+      "id": "d5b1fe28-c04d-4c47-aed1-ad6300395290",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -120
+      ],
+      "parameters": {
+        "content": "## Fill in emails and phones for the companies in your sheet\n\nPoint this at a Google Sheet of companies with a **Website** column. For every row that has a website and no email yet, it reads the company's site (home page, then the contact, about and imprint pages it links to) and writes back the best email, phone, LinkedIn, Instagram, Facebook and contact form it finds. Rows that already have an email are left alone.\n\n### How it works\n1. **Read your company list** reads every row of the sheet.\n2. **Pick rows to fill in** keeps rows with a website and an empty Email, and gathers them into a single Apify run, so 200 rows cost one run fee rather than 200.\n3. **Read their websites** runs the Website Contact Scraper on Apify.\n4. **Match contacts to rows** pairs each site's answer with its row by domain. A site that publishes nothing is marked \"no contacts published\". A site that refused or didn't answer is marked with the reason, so you can tell the two apart.\n5. **Write contacts back** updates those rows, matched on Website.\n\n### Setup\n1. Install the verified **Apify** node and add your Apify API token.\n2. Connect Google Sheets and pick your sheet in the first and last steps.\n3. The sheet needs a header row with **Website** and **Email**. Add the columns you want filled: Phone, LinkedIn, Instagram, Facebook, Contact form, Enriched on, Enrichment note.\n\n### Cost\n$0.001 a run plus $0.00075 per page read. In our test sites took 3 to 5 pages each, so 100 companies cost about $0.35. Lower **pagesPerSite** to spend less.",
+        "width": 500,
+        "height": 720
+      }
+    },
+    {
+      "id": "315eb882-1f21-4726-bcb9-31d320920c55",
+      "name": "Section: rows that need contacts",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "content": "## 1. Rows that need contacts\nWebsite filled, Email empty. Everything goes into one run.",
+        "width": 900,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "64015e61-be81-4fec-ad42-659a9a7afee4",
+      "name": "Section: read the websites",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        930,
+        0
+      ],
+      "parameters": {
+        "content": "## 2. Read the websites\nOne row back per site, found or not.",
+        "width": 320,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "512b07be-03cf-47b5-9789-d54735d6a3e5",
+      "name": "Section: back into the sheet",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        0
+      ],
+      "parameters": {
+        "content": "## 3. Back into the sheet\nOnly the cells it found are written; nothing you typed is cleared.",
+        "width": 500,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "bf059741-8fc6-49b1-a7e6-bcc150940835",
+      "name": "Run it",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        60,
+        160
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "56990507-30c3-46a2-ba09-638be8352ad3",
+      "name": "Settings",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        160
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "38f51914-00ad-4b3d-bd32-dfdd05217001",
+              "name": "onlyRowsWithoutEmail",
+              "type": "boolean",
+              "value": true
+            },
+            {
+              "id": "9eb2bb06-62f0-4c4e-9d11-4f7c7a5503a2",
+              "name": "pagesPerSite",
+              "type": "number",
+              "value": 5
+            },
+            {
+              "id": "e9b15f09-24a1-477d-ad70-8480e1f738c0",
+              "name": "maxRowsPerRun",
+              "type": "number",
+              "value": 500
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f947dabf-b602-42b8-90d1-3f072b56ccad",
+      "name": "Read your company list",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        160
+      ],
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "4a05bff1-bb1f-4b94-830e-c791f0e343a0",
+      "name": "Pick rows to fill in",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// Rows with a website and no email, gathered into ONE item so the Apify node runs\n// once for the whole sheet (it runs once per incoming item).\nconst settings = $('Settings').first().json;\nconst host = (u) => String(u ?? '').trim().toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').split(/[\\/?#]/)[0];\nconst rows = $input.all().map((i) => i.json)\n  .filter((r) => host(r.Website))\n  .filter((r) => !settings.onlyRowsWithoutEmail || !String(r.Email ?? '').trim())\n  .slice(0, settings.maxRowsPerRun);\nif (!rows.length) return [];\nreturn [{ json: { urls: rows.map((r) => String(r.Website).trim()), rows: rows.map((r) => ({ Website: r.Website, domain: host(r.Website) })) } }];"
+      }
+    },
+    {
+      "id": "4c63f04f-8907-4b02-aa44-f8a802f688d5",
+      "name": "Read their websites",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        160
+      ],
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "TF3reJw62Ow2d4j6H"
+        },
+        "actorInputMode": "json",
+        "customBody": "={{ JSON.stringify({\n  urls: $json.urls,\n  maxPagesPerSite: $('Settings').first().json.pagesPerSite\n}) }}",
+        "memory": 1024
+      }
+    },
+    {
+      "id": "2d760ca7-4776-431d-b87a-9f99a6089888",
+      "name": "Match contacts to rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// The actor returns one row per website: contacts, \"none published\" (emails: []),\n// or an error row with no emails field at all. Pair each with its sheet row by domain.\nconst host = (u) => String(u ?? '').trim().toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').split(/[\\/?#]/)[0];\nconst picked = $('Pick rows to fill in').first().json.rows;\nconst results = $input.all().map((i) => i.json);\nconst byDomain = new Map();\nfor (const r of results) {\n  for (const key of [host(r.url), host(r.finalUrl), host(r.domain)]) if (key && !byDomain.has(key)) byDomain.set(key, r);\n}\nconst today = new Date().toISOString().slice(0, 10);\nreturn picked.map((row) => {\n  const r = byDomain.get(row.domain);\n  const out = { Website: row.Website, 'Enriched on': today };\n  if (!r) {\n    out['Enrichment note'] = 'not read';\n  } else if (r.type === 'error') {\n    out['Enrichment note'] = `couldn't read the site: ${r.error}`;\n  } else {\n    const social = r.social ?? {};\n    const found = {\n      Email: r.email, Phone: r.phone, LinkedIn: social.linkedin, Instagram: social.instagram,\n      Facebook: social.facebook, 'Contact form': r.contactFormUrl,\n    };\n    for (const [k, v] of Object.entries(found)) if (v) out[k] = v;\n    out['Enrichment note'] = Object.keys(found).some((k) => found[k]) ? `found on ${r.pagesReadCount} page(s)` : 'no contacts published';\n  }\n  return { json: out };\n});"
+      }
+    },
+    {
+      "id": "d81f9f00-809d-4dc9-8440-ec41d1e2410d",
+      "name": "Write contacts back",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1580,
+        160
+      ],
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Website"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Run it": {
+      "main": [
+        [
+          {
+            "node": "Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settings": {
+      "main": [
+        [
+          {
+            "node": "Read your company list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read your company list": {
+      "main": [
+        [
+          {
+            "node": "Pick rows to fill in",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick rows to fill in": {
+      "main": [
+        [
+          {
+            "node": "Read their websites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read their websites": {
+      "main": [
+        [
+          {
+            "node": "Match contacts to rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Match contacts to rows": {
+      "main": [
+        [
+          {
+            "node": "Write contacts back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,272 @@
+{
+  "name": "Send new LinkedIn job postings to Slack twice a day with Apify",
+  "nodes": [
+    {
+      "id": "ad7c1835-5044-466a-81fc-5f896e21a573",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -120
+      ],
+      "parameters": {
+        "content": "## Slack alert for new LinkedIn jobs\n\nTwice a day this searches LinkedIn's public job listings for your keywords and places, and posts the postings you haven't seen yet to a Slack channel: title, company, place, salary when the posting states one, how many people have applied, and a link. A job is posted once. The next run skips it even if LinkedIn still lists it.\n\n### How it works\n1. **Every day at 8:00 and 14:00** starts the run.\n2. **What to watch** holds what you edit: keywords and places (one per line; every keyword is searched in every place), how recent a job must be, and title words to drop.\n3. **Search LinkedIn jobs** runs the LinkedIn Jobs Scraper on Apify. No LinkedIn login is involved.\n4. **Only jobs not posted before** remembers job IDs between runs, so Slack never sees a job twice. A search LinkedIn couldn't answer is let through once a day.\n5. **Write the Slack message** builds one message per run, with a warning line for any failed search. A run with nothing new posts nothing.\n\n### Setup\n1. Install the verified **Apify** node and add your Apify API token.\n2. Connect Slack in **Post to Slack** and pick the channel.\n3. Edit **What to watch**.\n\n### Cost\n$0.30 per 1,000 jobs read, plus $0.00005 a run. Two runs a day of 25 jobs each comes to about $0.45 a month. Jobs the second run has already seen are still read and paid for, which is the price of never missing one.\n\n### Customization\nTurn on **easyApplyOnly** or **underTenApplicantsOnly** in the Apify input to narrow it further, or swap Slack for email.",
+        "width": 500,
+        "height": 760
+      }
+    },
+    {
+      "id": "eeb63e78-bce0-467e-927b-1d01f946d163",
+      "name": "Section: what to watch",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "content": "## 1. What to watch\nKeywords \u00d7 places. Keep the window longer than the longest gap between runs.",
+        "width": 460,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "35afa266-09f6-4462-829c-212bea81e799",
+      "name": "Section: search",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        490,
+        0
+      ],
+      "parameters": {
+        "content": "## 2. Search\nOne Apify run for every keyword and place.",
+        "width": 300,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "a91f4ec8-d1ce-4b1f-8be5-ec8e5e02e6f3",
+      "name": "Section: to Slack",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        0
+      ],
+      "parameters": {
+        "content": "## 3. New ones to Slack\nJob IDs are remembered, so each job is posted once.",
+        "width": 700,
+        "height": 340,
+        "color": 7
+      }
+    },
+    {
+      "id": "00dec966-aeef-4a7e-811a-f83efd468aa2",
+      "name": "Every day at 8:00 and 14:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        60,
+        160
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8,14 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "de46727f-c8f2-464f-b37a-72e4f5ba0cb1",
+      "name": "What to watch",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        280,
+        160
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a55ae68b-6ae5-4060-9f2b-ec9761fd006b",
+              "name": "keywords",
+              "type": "string",
+              "value": "data engineer"
+            },
+            {
+              "id": "f991930a-a1da-4cd2-ae13-6addcb8223ac",
+              "name": "places",
+              "type": "string",
+              "value": "Austin, Texas, United States\nRemote"
+            },
+            {
+              "id": "63810635-ab89-4639-a097-c06a0176a9eb",
+              "name": "postedWithin",
+              "type": "string",
+              "value": "24 hours"
+            },
+            {
+              "id": "20834461-c8b8-4c5c-a466-31364c24ef70",
+              "name": "maxJobsPerSearch",
+              "type": "number",
+              "value": 25
+            },
+            {
+              "id": "0c494a9a-d454-42f3-8fae-b4d520993389",
+              "name": "dropTitlesWith",
+              "type": "string",
+              "value": "intern, internship"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "c65c82fa-96d6-48ab-a059-e7d214ead842",
+      "name": "Search LinkedIn jobs",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        580,
+        160
+      ],
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "5ORbEowyEgti7yjmE"
+        },
+        "actorInputMode": "json",
+        "customBody": "={{ JSON.stringify({\n  keywords: $json.keywords.split('\\n').map((s) => s.trim()).filter(Boolean),\n  locations: $json.places.split('\\n').map((s) => s.trim()).filter(Boolean),\n  postedWithin: $json.postedWithin,\n  maxJobs: $json.maxJobsPerSearch,\n  titleMustNotInclude: $json.dropTitlesWith.split(',').map((s) => s.trim()).filter(Boolean),\n  includeDescription: true\n}) }}",
+        "memory": 128
+      }
+    },
+    {
+      "id": "d6110296-1eec-46f4-9d9f-66b30411bfd0",
+      "name": "Only jobs not posted before",
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        900,
+        160
+      ],
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.type === 'job' ? $json.jobId : ['error', $json.searchKeywords, $json.searchLocation, $json.error, $now.toFormat('yyyy-MM-dd')].join('|') }}",
+        "options": {
+          "historySize": 10000
+        }
+      }
+    },
+    {
+      "id": "0cccf5ca-8bb4-4e16-8fc4-c50cd7d0fde5",
+      "name": "Write the Slack message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1140,
+        160
+      ],
+      "parameters": {
+        "jsCode": "// One Slack message per run. Error rows (a place LinkedIn couldn't find, a search\n// it refused) are listed at the bottom so a broken search doesn't look like a quiet day.\nconst items = $input.all().map((i) => i.json);\nconst jobs = items.filter((j) => j.type === 'job');\nconst failed = items.filter((j) => j.type === 'error');\nif (!jobs.length && !failed.length) return [];\n\nconst money = (j) => {\n  if (j.salaryMin == null) return '';\n  const k = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : `${n}`);\n  const cur = j.salaryCurrency === 'USD' ? '$' : `${j.salaryCurrency ?? ''} `;\n  const range = j.salaryMax && j.salaryMax !== j.salaryMin ? `${cur}${k(j.salaryMin)}\u2013${k(j.salaryMax)}` : `${cur}${k(j.salaryMin)}`;\n  return ` \u00b7 ${range}${j.salaryPeriod === 'hour' ? '/hr' : ''}`;\n};\nconst lines = jobs.slice(0, 30).map((j) => {\n  const applied = j.applicantCount != null ? ` \u00b7 ${j.applicants}` : (j.applicants ? ` \u00b7 ${j.applicants}` : '');\n  return `\u2022 <${j.jobUrl}|${j.title}> at *${j.companyName}*, ${j.location}${money(j)}${applied}`;\n});\nconst more = jobs.length > 30 ? [`\u2026and ${jobs.length - 30} more.`] : [];\nconst errors = failed.map((e) => `:warning: ${e.searchKeywords ?? ''} ${e.searchLocation ? `in ${e.searchLocation}` : ''}: ${e.errorDescription}`);\nconst head = jobs.length ? `*${jobs.length} new LinkedIn job${jobs.length === 1 ? '' : 's'}*` : '*No new LinkedIn jobs*';\nreturn [{ json: { text: [head, ...lines, ...more, ...errors].join('\\n'), newJobs: jobs.length } }];"
+      }
+    },
+    {
+      "id": "c48a39ab-78df-4657-ae0b-824a64d8bbb0",
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1380,
+        160
+      ],
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ $json.text }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false,
+          "unfurl_links": false
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every day at 8:00 and 14:00": {
+      "main": [
+        [
+          {
+            "node": "What to watch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "What to watch": {
+      "main": [
+        [
+          {
+            "node": "Search LinkedIn jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search LinkedIn jobs": {
+      "main": [
+        [
+          {
+            "node": "Only jobs not posted before",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only jobs not posted before": {
+      "main": [
+        [
+          {
+            "node": "Write the Slack message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write the Slack message": {
+      "main": [
+        [
+          {
+            "node": "Post to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

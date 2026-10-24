@@ -1,0 +1,348 @@
+{
+  "name": "Save Google Maps business leads with emails to Google Sheets using Apify",
+  "nodes": [
+    {
+      "id": "79f57114-3770-44dd-8b4d-4b378a90e27b",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -120
+      ],
+      "parameters": {
+        "content": "## Google Maps leads with emails, straight into Google Sheets\n\nType the searches you would type into Google Maps (\"dentists in miami fl\"). Each business Google lists lands in your sheet as one row: name, category, rating, phone, address, website, and the **emails, phones and social accounts its own website publishes**. One Apify actor does the Maps search and the website reading, so there is no second scraper and no AI step to pay for.\n\n### How it works\n1. **Set your search** holds everything you change: the searches (one per line), how many businesses per search, and whether to keep only businesses with an email.\n2. **Find businesses and their emails** runs the Google Maps Leads Scraper on Apify and waits for it. A 20-business search takes about a minute.\n3. Failed searches go down their own branch, so a search that could not be read never turns into a silent gap.\n4. Each business becomes one sheet row. The sheet is updated by Place ID, so running the same search next month adds new businesses without duplicating old ones.\n\n### Setup\n1. Install the verified **Apify** node and add your Apify API token (Apify Console \u2192 Settings \u2192 API & Integrations).\n2. Connect Google Sheets, make an empty sheet, and pick it in **Add or update leads in your sheet**.\n3. Edit **Set your search** and run.\n\n### Cost\n$0.50 per 1,000 businesses, plus $1.50 per 1,000 for businesses whose website gave contacts. A 20-business search costs about $0.04, billed by Apify. Businesses with no website are still returned, with their Maps phone and address.",
+        "width": 500,
+        "height": 760
+      }
+    },
+    {
+      "id": "dd4a3947-3c45-45f6-a734-5972a91321ad",
+      "name": "Section: your search",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -60
+      ],
+      "parameters": {
+        "content": "## 1. Your search\nChange the searches here. Put the place in each one.",
+        "width": 440,
+        "height": 380,
+        "color": 7
+      }
+    },
+    {
+      "id": "5f13b51d-1e76-4443-afbd-7bb7a60de68c",
+      "name": "Section: run",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        470,
+        -60
+      ],
+      "parameters": {
+        "content": "## 2. Find businesses and emails\nOne Apify run: Google Maps, then each business's own website.",
+        "width": 320,
+        "height": 380,
+        "color": 7
+      }
+    },
+    {
+      "id": "a7cf9a26-672a-42c9-991f-2a5c701a5200",
+      "name": "Section: save",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        -60
+      ],
+      "parameters": {
+        "content": "## 3. Save the leads\nOne row per business, matched on Place ID so reruns don't duplicate.",
+        "width": 720,
+        "height": 380,
+        "color": 7
+      }
+    },
+    {
+      "id": "6dd34896-0d93-498c-b754-02507d1da897",
+      "name": "Section: failed searches",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        360
+      ],
+      "parameters": {
+        "content": "## Failed searches\nA search Google could not answer arrives here with the reason. Add an email or Slack step if you schedule this.",
+        "width": 500,
+        "height": 280,
+        "color": 7
+      }
+    },
+    {
+      "id": "aaa8e652-1dd5-4be4-b326-9819498300e4",
+      "name": "Run it",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        60,
+        160
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "589663bb-7f65-4cc7-8dc1-7d09f0163df6",
+      "name": "Set your search",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        160
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b27db6d4-e99b-4f7f-b5b0-02ea81ccd0f2",
+              "name": "searches",
+              "type": "string",
+              "value": "dentists in miami fl\ndentists in fort lauderdale fl"
+            },
+            {
+              "id": "66dc4ce8-cfd7-4c0e-b2a0-61630b74a3a3",
+              "name": "businessesPerSearch",
+              "type": "number",
+              "value": 20
+            },
+            {
+              "id": "b427f594-a9f3-4a03-a555-507174e24280",
+              "name": "websitePagesPerBusiness",
+              "type": "number",
+              "value": 4
+            },
+            {
+              "id": "64430a51-7825-4813-ac04-d19f004b328b",
+              "name": "skipBusinessesWithoutWebsite",
+              "type": "boolean",
+              "value": false
+            },
+            {
+              "id": "b2f551e2-fd35-4598-969a-61034e8ac437",
+              "name": "onlyBusinessesWithEmail",
+              "type": "boolean",
+              "value": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "240e72dd-606b-44f3-8692-829d3e2a4d59",
+      "name": "Find businesses and their emails",
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 2,
+      "position": [
+        560,
+        160
+      ],
+      "parameters": {
+        "resource": "Actors",
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "LaMituYJcUhkZdJqY"
+        },
+        "actorInputMode": "json",
+        "customBody": "={{ JSON.stringify({\n  queries: $json.searches.split('\\n').map((s) => s.trim()).filter(Boolean),\n  maxPlaces: $json.businessesPerSearch,\n  maxPagesPerSite: $json.websitePagesPerBusiness,\n  skipPlacesWithoutWebsite: $json.skipBusinessesWithoutWebsite\n}) }}",
+        "memory": 1024
+      }
+    },
+    {
+      "id": "0301c606-c126-4f05-8689-c1975abbe32e",
+      "name": "Business or failed search?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        880,
+        160
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "42ee4fb3-99cd-4601-a776-ab198528506c",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "place",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "f06bb74c-f1ab-4040-a24f-a8575f6ec815",
+      "name": "One row per business",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        60
+      ],
+      "parameters": {
+        "jsCode": "// One sheet row per business. Column names are what you'll see in the sheet.\nconst settings = $('Set your search').first().json;\nconst rows = [];\nfor (const item of $input.all()) {\n  const b = item.json;\n  if (settings.onlyBusinessesWithEmail && !b.email) continue;\n  rows.push({\n    json: {\n      'Place ID': b.placeId,\n      'Name': b.name,\n      'Category': b.category ?? '',\n      'Email': b.email ?? '',\n      'Other emails': (b.emails ?? []).filter((e) => e !== b.email).join(', '),\n      'Phone': b.phoneE164 ?? b.phone ?? '',\n      'Website': b.website ?? '',\n      'Address': b.address ?? '',\n      'Rating': b.rating ?? '',\n      'Reviews': b.reviewCount ?? '',\n      'Instagram': b.instagram ?? '',\n      'Facebook': b.facebook ?? '',\n      'LinkedIn': b.linkedin ?? '',\n      'Contact form': b.contactFormUrl ?? '',\n      'Contacts status': b.contactsStatus ?? '',\n      'Google Maps': b.googleMapsUrl ?? '',\n      'Search': b.query ?? '',\n      'Found on': (b.retrievedAt ?? '').slice(0, 10),\n    },\n  });\n}\nreturn rows;"
+      }
+    },
+    {
+      "id": "20c5523e-8868-46e6-ab3d-0291a567ef85",
+      "name": "Failed search and why",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1180,
+        500
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6672b9ae-557a-47ff-9ba4-2b86cf421085",
+              "name": "search",
+              "type": "string",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "id": "73687b04-e448-4c11-a432-4290a20069e8",
+              "name": "error",
+              "type": "string",
+              "value": "={{ $json.error }}"
+            },
+            {
+              "id": "e937d814-54d8-4101-9fd1-81865a3ba987",
+              "name": "reason",
+              "type": "string",
+              "value": "={{ $json.errorDescription }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "89786891-57e3-4bfe-a198-dd2afe35c62e",
+      "name": "Add or update leads in your sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1380,
+        60
+      ],
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Place ID"
+          ],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Run it": {
+      "main": [
+        [
+          {
+            "node": "Set your search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set your search": {
+      "main": [
+        [
+          {
+            "node": "Find businesses and their emails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find businesses and their emails": {
+      "main": [
+        [
+          {
+            "node": "Business or failed search?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business or failed search?": {
+      "main": [
+        [
+          {
+            "node": "One row per business",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Failed search and why",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "One row per business": {
+      "main": [
+        [
+          {
+            "node": "Add or update leads in your sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
